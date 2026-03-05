@@ -369,38 +369,39 @@ void ARM2612AudioProcessorEditor::resized()
     const int colW = (getWidth() - kMargin) / 4;
     const int pad = 8;
     
-    // Column 1: Algorithm (square)
+    // Column 1: Algorithm + Feedback
     int col1X = static_cast<int>(kMargin * 0.5f) + pad;
     int algoSize = colW - pad * 2;  // Square
-    algorithmSelector.setBounds(col1X, globalY + 8, algoSize, 60 );
+    algorithmSelector.setBounds(col1X, globalY + 8, algoSize, 60);  // Fixed 60px height
     
-    // Column 2: Feedback + Octave
+    // Feedback below algorithm
+    globalFb.label.setBounds(col1X, globalY + 76, 60, 20);
+    globalFb.label.setFont(juce::Font(11.0f));
+    feedbackSlider.setBounds(col1X + 4, globalY + 96, colW - pad * 2 - 4, 22);
+    
+    // Column 2: Octave + LFO
     int col2X = static_cast<int>(kMargin * 0.5f) + colW + pad;
     
-    globalFb.label.setBounds(col2X, globalY + 8, 60, 20);
-    globalFb.label.setFont(juce::Font(11.0f));
-    feedbackSlider.setBounds(col2X + 4, globalY + 28, colW - pad * 2 - 4, 22);
-    
-    globalOct.label.setBounds(col2X, globalY + 58, 60, 20);
+    globalOct.label.setBounds(col2X, globalY + 8, 60, 20);
     globalOct.label.setFont(juce::Font(11.0f));
-    octaveSlider.setBounds(col2X + 4, globalY + 78, colW - pad * 2 - 4, 22);
+    octaveSlider.setBounds(col2X + 4, globalY + 28, colW - pad * 2 - 4, 22);
     
-    // Column 3: LFO + AMS + FMS
+    globalLfoFreq.label.setBounds(col2X, globalY + 58, colW - pad * 2, 14);
+    globalLfoFreq.label.setFont(juce::Font(11.0f));
+    lfoFreqBox.setBounds(col2X, globalY + 74, colW - pad * 2, 24);
+    
+    // Column 3: AMS + FMS
     int col3X = static_cast<int>(kMargin * 0.5f) + colW * 2 + pad;
     
-    globalLfoFreq.label.setBounds(col3X, globalY + 8, colW - pad * 2, 14);
-    globalLfoFreq.label.setFont(juce::Font(11.0f));
-    lfoFreqBox.setBounds(col3X, globalY + 24, colW - pad * 2, 24);
-    
-    globalAms.label.setBounds(col3X, globalY + 56, 40, 20);
+    globalAms.label.setBounds(col3X, globalY + 8, 40, 20);
     globalAms.label.setFont(juce::Font(11.0f));
-    amsSlider.setBounds(col3X + 42, globalY + 56, colW - pad * 2 - 42, 22);
+    amsSlider.setBounds(col3X + 42, globalY + 8, colW - pad * 2 - 42, 22);
     
-    globalFms.label.setBounds(col3X, globalY + 84, 40, 20);
+    globalFms.label.setBounds(col3X, globalY + 36, 40, 20);
     globalFms.label.setFont(juce::Font(11.0f));
-    fmsSlider.setBounds(col3X + 42, globalY + 84, colW - pad * 2 - 42, 22);
+    fmsSlider.setBounds(col3X + 42, globalY + 36, colW - pad * 2 - 42, 22);
     
-    // Column 4: Instrument Name + Import + Export + Phase Lock
+    // Column 4: Instrument Name + Import + Export + Phase Lock + Version
     int col4X = static_cast<int>(kMargin * 0.5f) + colW * 3 + pad;
     
     // Instrument name at top of column 4
