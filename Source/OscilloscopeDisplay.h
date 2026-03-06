@@ -15,6 +15,20 @@ public:
         buffer.clear();
         buffer.resize(bufferSize, 0.0f);
         startTimerHz(60);  // 60 FPS refresh
+        
+        // Setup phase lock toggle
+        phaseLockToggle.setButtonText("Phase Lock");
+        phaseLockToggle.onClick = [this]() {
+            setPhaseLock(phaseLockToggle.getToggleState());
+        };
+        addAndMakeVisible(phaseLockToggle);
+    }
+    
+    void resized() override
+    {
+        // Position phase lock toggle at bottom-right of oscilloscope
+        auto bounds = getLocalBounds();
+        phaseLockToggle.setBounds(bounds.getRight() - 90, bounds.getBottom() - 26, 86, 22);
     }
 
     void pushSample(float sample)
@@ -117,4 +131,5 @@ private:
     bool phaseLockEnabled = false;
     float zoom = 2.5f;  // 2.5x zoom by default
     juce::CriticalSection bufferLock;
+    juce::ToggleButton phaseLockToggle;
 };

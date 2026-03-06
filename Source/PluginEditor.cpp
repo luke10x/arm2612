@@ -34,6 +34,9 @@ ARM2612AudioProcessorEditor::ARM2612AudioProcessorEditor(
     midiKeyboard.setColour(juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour(0xFF1A1A2E));
     midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId, accent.withAlpha(0.75f));
     midiKeyboard.setColour(juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, accent.withAlpha(0.3f));
+    midiKeyboard.setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colours::transparentBlack);
+    midiKeyboard.setColour(juce::MidiKeyboardComponent::upDownButtonBackgroundColourId, bg);
+    midiKeyboard.setColour(juce::MidiKeyboardComponent::upDownButtonArrowColourId, bg);
     addAndMakeVisible(midiKeyboard);
 
     // Tab order: within each op column
@@ -56,14 +59,6 @@ ARM2612AudioProcessorEditor::ARM2612AudioProcessorEditor(
     setResizeLimits(600, totalH, 1600, totalH + 100);
     
     addAndMakeVisible(oscilloscope);
-    
-    // Phase lock toggle
-    phaseLockToggle.setButtonText("Phase Lock");
-    phaseLockToggle.setToggleState(false, juce::dontSendNotification);
-    phaseLockToggle.onClick = [this]() {
-        oscilloscope.setPhaseLock(phaseLockToggle.getToggleState());
-    };
-    addAndMakeVisible(phaseLockToggle);
     
     // Version label (small, bottom of column 4)
     versionLabel.setFont(juce::Font(8.5f));
@@ -409,9 +404,6 @@ void ARM2612AudioProcessorEditor::resized()
     importBtn.setBounds(col4X, globalY + 40, colW - pad * 2, 28);
     exportBtn.setBounds(col4X, globalY + 74, colW - pad * 2, 28);
     
-    // Phase lock toggle
-    phaseLockToggle.setBounds(col4X, globalY + 110, colW - pad * 2, 24);
-    
     // Version label at very bottom of column 4
     versionLabel.setBounds(col4X, globalY + kGlobalH - 16, colW - pad * 2, 14);
     
@@ -486,14 +478,21 @@ void ARM2612AudioProcessorEditor::resized()
         y += kSliderH;
     }
 
-    // MIDI keyboard - centered with background padding
+    // MIDI keyboard - calculate width based on actual keys (C2 to C7 = 60 keys)
     const int opAreaH = kHeaderH + kSliderH + kEnvH + kEnvH +  // SSG now same height as envelope
                         NUM_SLIDERS_AFTER_ENV * kSliderH + NUM_SLIDERS_EXTRA * kSliderH + 
                         kSliderH + kPad * 2;  // AM moved to header, no kToggleH needed
     const int kbY = kTitleH + kMargin + kGlobalH + kMargin + opAreaH + kMargin;
-    const int kbWidth = getWidth() - kMargin * 4;  // Inset from edges
-    const int kbX = (getWidth() - kbWidth) / 2;
-    midiKeyboard.setBounds(kbX, kbY, kbWidth, kKeyboardH);
+    
+    // Calculate proper keyboard width to avoid white background overflow
+    // MidiKeyboardComponent calculates its own required width based on key range
+    float keyWidth = midiKeyboard.getKeyWidth();
+    int numWhiteKeys = 35;  // C2 to C7 inclusive (5 octaves = 7*5 white keys)
+    int naturalKeyboardWidth = static_cast<int>(keyWidth * numWhiteKeys);
+    
+    // Center the keyboard with its natural width
+    const int kbX = (getWidth() - naturalKeyboardWidth) / 2;
+    midiKeyboard.setBounds(kbX, kbY, naturalKeyboardWidth, kKeyboardH);
 }
 
 void ARM2612AudioProcessorEditor::parameterChanged(const juce::String& parameterID, float newValue)

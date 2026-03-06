@@ -192,7 +192,6 @@ private:
     juce::Label instrumentNameLabel;
     juce::Label versionLabel;
     OscilloscopeDisplay oscilloscope;
-    juce::ToggleButton phaseLockToggle;
 
     LabeledControl globalAlgo, globalFb, globalLfoEn, globalLfoFreq,
                    globalAms, globalFms, globalOct;
