@@ -52,8 +52,9 @@ ARM2612AudioProcessorEditor::ARM2612AudioProcessorEditor(
     // New layout: Level above EG, then EG, then SSG below EG (same height as EG), then envelope params, then extras
     const int opAreaH = kHeaderH + kSliderH + kEnvH + kEnvH +  // SSG same height as envelope
                         NUM_SLIDERS_AFTER_ENV * kSliderH + NUM_SLIDERS_EXTRA * kSliderH + 
-                        kSliderH + kToggleH + kPad * 2;
-    const int totalH  = kTitleH + kMargin + kGlobalH + kMargin + opAreaH + kMargin + kKeyboardH + kMargin;
+                        kSliderH + kPad * 2;  // AM in header now
+    const int kbPanelH = kKeyboardH + kPad * 2;  // Footer panel with padding
+    const int totalH  = kTitleH + kMargin + kGlobalH + kMargin + opAreaH + kMargin + kbPanelH + kMargin;
     setSize(720, totalH);
     setResizable(true, true);
     setResizeLimits(600, totalH, 1600, totalH + 100);
@@ -350,6 +351,24 @@ void ARM2612AudioProcessorEditor::paint(juce::Graphics& g)
         g.drawLine(x, static_cast<float>(opAreaY + 6),
                    x, static_cast<float>(opAreaY + opAreaH - 6), 1.0f);
     }
+    
+    // Horizontal separators between envelope params and Multi/Detune (in each operator column)
+    // Appears after Release (row index 5) and before Multi (row index 6)
+    const int separatorY = opAreaY + kHeaderH + kSliderH + kEnvH + kEnvH + 
+                           NUM_SLIDERS_AFTER_ENV * kSliderH;  // After Release
+    g.setColour(YmColors::border.withAlpha(0.3f));  // Subtle
+    for (int op = 0; op < 4; op++) {
+        float x1 = kMargin * 0.5f + op * colW + 8;
+        float x2 = kMargin * 0.5f + (op + 1) * colW - 8;
+        g.drawLine(x1, static_cast<float>(separatorY), x2, static_cast<float>(separatorY), 1.0f);
+    }
+    
+    // Footer panel background (keyboard section)
+    const int kbPanelY = opAreaY + opAreaH + kMargin;
+    const int kbPanelH = kKeyboardH + kPad * 2;
+    g.setColour(panel);
+    g.fillRoundedRectangle(kMargin * 0.5f, static_cast<float>(kbPanelY),
+                           getWidth() - kMargin, static_cast<float>(kbPanelH), 6.0f);
 
     // Plain background - no zebra stripes
 }
@@ -407,10 +426,11 @@ void ARM2612AudioProcessorEditor::resized()
     // Version label at very bottom of column 4
     versionLabel.setBounds(col4X, globalY + kGlobalH - 16, colW - pad * 2, 14);
     
-    // Oscilloscope spanning columns 2-3 at bottom (starts lower to accommodate LFO)
-    int scopeY = globalY + 56;  // Below LFO dropdown
+    // Oscilloscope spanning columns 2-3 at bottom (with top margin for breathing room)
+    int scopeMarginTop = 8;  // Add margin above scope
+    int scopeY = globalY + 56 + scopeMarginTop;  // Below LFO dropdown + margin
     int scopeW = colW * 2 - pad * 2;
-    int scopeH = kGlobalH - 56 - pad;  // Fill remaining space
+    int scopeH = kGlobalH - 56 - scopeMarginTop - pad;  // Adjust for margin
     oscilloscope.setBounds(col2X, scopeY, scopeW, scopeH);
 
     // Operator columns below global panel
@@ -478,11 +498,12 @@ void ARM2612AudioProcessorEditor::resized()
         y += kSliderH;
     }
 
-    // MIDI keyboard - calculate width based on actual keys (C2 to C7 = 60 keys)
+    // MIDI keyboard - centered within footer panel
     const int opAreaH = kHeaderH + kSliderH + kEnvH + kEnvH +  // SSG now same height as envelope
                         NUM_SLIDERS_AFTER_ENV * kSliderH + NUM_SLIDERS_EXTRA * kSliderH + 
                         kSliderH + kPad * 2;  // AM moved to header, no kToggleH needed
-    const int kbY = kTitleH + kMargin + kGlobalH + kMargin + opAreaH + kMargin;
+    const int kbPanelY = kTitleH + kMargin + kGlobalH + kMargin + opAreaH + kMargin;
+    const int kbY = kbPanelY + kPad;  // Add padding within footer panel
     
     // Calculate proper keyboard width to avoid white background overflow
     // MidiKeyboardComponent calculates its own required width based on key range
@@ -490,7 +511,7 @@ void ARM2612AudioProcessorEditor::resized()
     int numWhiteKeys = 35;  // C2 to C7 inclusive (5 octaves = 7*5 white keys)
     int naturalKeyboardWidth = static_cast<int>(keyWidth * numWhiteKeys);
     
-    // Center the keyboard with its natural width
+    // Center the keyboard within the window
     const int kbX = (getWidth() - naturalKeyboardWidth) / 2;
     midiKeyboard.setBounds(kbX, kbY, naturalKeyboardWidth, kKeyboardH);
 }
