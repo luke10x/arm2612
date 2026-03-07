@@ -122,7 +122,7 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalFb.control = &feedbackSlider;
     globalFb.slAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, GLOBAL_FEEDBACK, feedbackSlider);
-    globalFb.label.setText("Feedback", juce::dontSendNotification);
+    globalFb.label.setText("FB", juce::dontSendNotification);
     globalFb.label.setJustificationType(juce::Justification::centredRight);
     globalFb.label.setFont(juce::Font(11.0f));
     globalFb.label.setColour(juce::Label::textColourId, dim);
@@ -134,7 +134,7 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalLfoFreq.control = &lfoFreqBox;
     globalLfoFreq.cbAtt = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         audioProcessor.apvts, GLOBAL_LFO_FREQ, lfoFreqBox);
-    globalLfoFreq.label.setText("LFO", juce::dontSendNotification);
+    globalLfoFreq.label.setText("LFOFREQ", juce::dontSendNotification);
     globalLfoFreq.label.setJustificationType(juce::Justification::centredLeft);
     globalLfoFreq.label.setFont(juce::Font(10.0f));
     globalLfoFreq.label.setColour(juce::Label::textColourId, dim);
@@ -176,7 +176,7 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalOct.control = &octaveSlider;
     globalOct.slAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.apvts, GLOBAL_OCTAVE, octaveSlider);
-    globalOct.label.setText("Octave", juce::dontSendNotification);
+    globalOct.label.setText("BLOCK", juce::dontSendNotification);
     globalOct.label.setJustificationType(juce::Justification::centredRight);
     globalOct.label.setFont(juce::Font(11.0f));
     globalOct.label.setColour(juce::Label::textColourId, dim);
@@ -506,7 +506,7 @@ void ARM2612AudioProcessorEditor::resized()
 
         // Rate Scale
         rowMidY = y + kSliderH / 2;
-        ops[op].rsRow.label.setText("RateScale", juce::dontSendNotification);
+        ops[op].rsRow.label.setText("RS", juce::dontSendNotification);
         ops[op].rsRow.label.setBounds(cx + 2, rowMidY - 9, labelW, 18);
         ops[op].rsRow.slider.setBounds(sliderX, rowMidY - 12, sliderW, 24);
         y += kSliderH;

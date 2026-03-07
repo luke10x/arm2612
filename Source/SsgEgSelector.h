@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ModalBackdrop.h"
 
 static void drawSsgMode(juce::Graphics& g, int dropdownIdx, juce::Rectangle<int> area)
 {
@@ -101,49 +102,61 @@ static void drawSsgMode(juce::Graphics& g, int dropdownIdx, juce::Rectangle<int>
     
 }
 // ─────────────────────────────────────────────────────────────────────────────
-// SsgEgPopup - Popup window showing all 9 SSG-EG modes (Off + 8 modes)
+// SsgEgPickerPanel - 3x3 grid showing all 9 SSG-EG modes (Off + 8 modes)
 // ─────────────────────────────────────────────────────────────────────────────
-class SsgEgPopup : public juce::Component
+class SsgEgPickerPanel : public juce::Component
 {
 public:
-    SsgEgPopup(int currentMode) : selectedMode(currentMode) {}
-
+    int selectedMode = 0;
+    int hoveredMode = -1;
     std::function<void(int)> onSelect;
+
+    SsgEgPickerPanel() { setInterceptsMouseClicks(true, false); }
 
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(juce::Colour(0xFF1a1a2e));
+        g.setColour(juce::Colour(0xf51a1a2e));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), 10.f);
         g.setColour(juce::Colour(0xFF00D4AA));
-        g.drawRect(getLocalBounds(), 2);
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.5f), 10.f, 2.f);
 
-        int itemW = getWidth() / 3;
-        int itemH = getHeight() / 3;
+        g.setColour(juce::Colour(0xFF00D4AA));
+        g.setFont(juce::Font("Courier New", 11.f, juce::Font::bold));
+        g.drawText("Select SSG-EG Mode",
+                   getLocalBounds().withHeight(24).reduced(10,0),
+                   juce::Justification::centredLeft);
+
+        auto grid = getLocalBounds().withTrimmedTop(24).reduced(6);
+        int itemW = grid.getWidth() / 3;
+        int itemH = grid.getHeight() / 3;
 
         for (int i = 0; i < 9; i++)
         {
             int col = i % 3;
             int row = i / 3;
-            auto box = juce::Rectangle<int>(col * itemW, row * itemH, itemW, itemH).reduced(4);
+            auto box = juce::Rectangle<int>(
+                grid.getX() + col * itemW, 
+                grid.getY() + row * itemH, 
+                itemW, itemH).reduced(4);
 
-            // Hover or selected
             if (i == hoveredMode || i == selectedMode)
             {
-                g.setColour(i == selectedMode ? juce::Colour(0xFF252540) : juce::Colour(0xFF202030));
-                g.fillRoundedRectangle(box.toFloat(), 4.0f);
-                if (i == selectedMode)
-                {
-                    g.setColour(juce::Colour(0xFF00D4AA));
-                    g.drawRoundedRectangle(box.toFloat(), 4.0f, 2.0f);
-                }
+                g.setColour(i == selectedMode ? juce::Colour(0xFF252550)
+                                              : juce::Colour(0xFF202038));
+                g.fillRoundedRectangle(box.toFloat(), 5.f);
+            }
+            if (i == selectedMode)
+            {
+                g.setColour(juce::Colour(0xFF00D4AA));
+                g.drawRoundedRectangle(box.toFloat(), 5.f, 2.f);
             }
 
-            // Draw SSG-EG diagram
             auto diagramArea = box.reduced(8).withTrimmedBottom(20);
             drawSsgMode(g, i, diagramArea);
 
-            // Mode label
-            g.setColour(juce::Colour(0xFF556070));
-            g.setFont(juce::Font(9.0f));
+            g.setColour(i == selectedMode ? juce::Colour(0xFF00D4AA)
+                                          : juce::Colour(0xFF556070));
+            g.setFont(juce::Font("Courier New", 9.f, juce::Font::plain));
             juce::String label = (i == 0) ? "Off" : getSsgModeName(i - 1);
             g.drawText(label, box.withTrimmedTop(box.getHeight() - 18),
                        juce::Justification::centred, false);
@@ -152,58 +165,43 @@ public:
 
     void mouseMove(const juce::MouseEvent& e) override
     {
-        int itemW = getWidth() / 3;
-        int itemH = getHeight() / 3;
-        int col = e.x / itemW;
-        int row = e.y / itemH;
-        int newHover = row * 3 + col;
-        if (newHover >= 0 && newHover < 9 && newHover != hoveredMode)
-        {
-            hoveredMode = newHover;
-            repaint();
-        }
+        auto grid = getLocalBounds().withTrimmedTop(24).reduced(6);
+        int itemW = juce::jmax(1, grid.getWidth() / 3);
+        int itemH = juce::jmax(1, grid.getHeight() / 3);
+        int col = juce::jlimit(0, 2, (e.x - grid.getX()) / itemW);
+        int row = juce::jlimit(0, 2, (e.y - grid.getY()) / itemH);
+        int n = row * 3 + col;
+        if (n != hoveredMode) { hoveredMode = n; repaint(); }
     }
 
-    void mouseExit(const juce::MouseEvent&) override
-    {
-        hoveredMode = -1;
-        repaint();
-    }
+    void mouseExit(const juce::MouseEvent&) override { hoveredMode = -1; repaint(); }
 
     void mouseDown(const juce::MouseEvent& e) override
     {
-        int itemW = getWidth() / 3;
-        int itemH = getHeight() / 3;
-        int col = e.x / itemW;
-        int row = e.y / itemH;
+        auto grid = getLocalBounds().withTrimmedTop(24).reduced(6);
+        int itemW = juce::jmax(1, grid.getWidth() / 3);
+        int itemH = juce::jmax(1, grid.getHeight() / 3);
+        int col = juce::jlimit(0, 2, (e.x - grid.getX()) / itemW);
+        int row = juce::jlimit(0, 2, (e.y - grid.getY()) / itemH);
         int mode = row * 3 + col;
-        if (mode >= 0 && mode < 9 && onSelect)
-        {
-            onSelect(mode);
-            if (auto* parent = getParentComponent())
-                parent->exitModalState(0);
-        }
+        if (mode >= 0 && mode < 9 && onSelect) onSelect(mode);
     }
 
 private:
-    int selectedMode = 0;
-    int hoveredMode = -1;
-
     juce::String getSsgModeName(int mode)
     {
         const char* names[] = {
-            "Down Down Down",  // Mode 0: 
-            "Down.",           // Mode 1:
-            "Down Up Down Up", // Mode 2:
-            "Down UP",         // Mode 3:
-            "Up Up Up",        // Mode 4:
-            "Up.",             // Mode 5:
-            "Up Down Up Down", // Mode 6: 
-            "Up DOWN"          // Mode 7:
+            "Down Down Down",  // Mode 0
+            "Down.",           // Mode 1
+            "Down Up Down Up", // Mode 2
+            "Down UP",         // Mode 3
+            "Up Up Up",        // Mode 4
+            "Up.",             // Mode 5
+            "Up Down Up Down", // Mode 6
+            "Up DOWN"          // Mode 7
         };
         return (mode >= 0 && mode < 8) ? names[mode] : "?";
     }
-
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -246,21 +244,51 @@ public:
         drawSsgMode(g, selectedMode, diagramArea);
     }
 
-    void mouseDown(const juce::MouseEvent&) override
-    {
-        // Show popup directly below this component
-        auto* popup = new SsgEgPopup(selectedMode);
-        popup->setSize(360, 270);  // 3x3 grid
-        popup->onSelect = [this](int mode) {
-            setSelectedMode(mode);
-            if (onChange)
-                onChange(mode);
-        };
-        
-        juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(popup),
-                                                getScreenBounds(), nullptr);
-    }
+    void mouseDown(const juce::MouseEvent&) override { showModal(); }
 
 private:
     int selectedMode = 0;
+    ModalBackdrop<SsgEgPickerPanel>* activeModal = nullptr;
+
+    void showModal()
+    {
+        if (activeModal) return;
+        auto* root = getTopLevelComponent();
+        if (!root) return;
+
+        auto panel = std::make_unique<SsgEgPickerPanel>();
+        panel->selectedMode = selectedMode;
+        
+        panel->onSelect = [this](int mode)
+        {
+            setSelectedMode(mode);
+            if (onChange) onChange(mode);
+            closeModal();
+        };
+
+        const int pw = juce::jmin(400, (int)(root->getWidth() * 0.65f));
+        const int ph = juce::jmin(300, (int)(root->getHeight() * 0.70f));
+
+        activeModal = new ModalBackdrop<SsgEgPickerPanel>(
+            panel.release(),
+            [this]() { closeModal(); }
+        );
+        
+        activeModal->setBounds(root->getLocalBounds());
+        activeModal->pickerPanel->setBounds(
+            (activeModal->getWidth() - pw) / 2,
+            (activeModal->getHeight() - ph) / 2,
+            pw, ph
+        );
+        
+        root->addAndMakeVisible(activeModal);
+        activeModal->toFront(true);
+    }
+
+    void closeModal()
+    {
+        if (!activeModal) return;
+        activeModal->dismiss();
+        activeModal = nullptr;
+    }
 };

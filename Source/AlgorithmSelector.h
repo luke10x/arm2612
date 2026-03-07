@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ModalBackdrop.h"
 
 // =============================================================================
 // Algorithm diagram drawing
@@ -178,55 +179,6 @@ public:
 };
 
 // =============================================================================
-// AlgorithmModal  — full-screen dim backdrop that blocks ALL input (modal).
-// Clicking the dim area outside the picker dismisses with NO selection change.
-// The picker panel is positioned on the RIGHT side to avoid the left notch.
-// =============================================================================
-class AlgorithmModal : public juce::Component
-{
-public:
-    AlgorithmPickerPanel picker;
-    std::function<void()> onDismiss;
-
-    AlgorithmModal()
-    {
-        setInterceptsMouseClicks(true, true);
-        addAndMakeVisible(picker);
-    }
-
-    // Call after bounds are set. Centres picker on screen (lightbox style).
-    void layoutPicker (int selectedAlgo)
-    {
-        picker.selectedAlgo = selectedAlgo;
-        const int pw = juce::jmin(430, (int)(getWidth()  * 0.65f));
-        const int ph = juce::jmin(250, (int)(getHeight() * 0.80f));
-        picker.setBounds((getWidth()-pw)/2, (getHeight()-ph)/2, pw, ph);
-    }
-
-    void paint (juce::Graphics& g) override
-    {
-        g.setColour(juce::Colour(0xcc000000));
-        g.fillRect(getLocalBounds());
-        g.setColour(juce::Colour(0x88ffffff));
-        g.setFont(juce::Font("Courier New", 10.f, juce::Font::plain));
-        g.drawText("tap outside to cancel",
-                   getLocalBounds().withTrimmedBottom(6),
-                   juce::Justification::centredBottom);
-    }
-
-    // Backdrop click — dismiss without changing selection
-    void mouseDown (const juce::MouseEvent& e) override
-    {
-        if (!picker.getBounds().contains(e.getPosition()))
-            if (onDismiss) onDismiss();
-    }
-    // Swallow all other mouse events so nothing beneath receives them
-    void mouseUp   (const juce::MouseEvent&) override {}
-    void mouseDrag (const juce::MouseEvent&) override {}
-    void mouseMove (const juce::MouseEvent&) override {}
-};
-
-// =============================================================================
 // AlgorithmSelector  — the preview widget shown in the global column
 // =============================================================================
 class AlgorithmSelector : public juce::Component
@@ -255,8 +207,8 @@ public:
     void mouseDown (const juce::MouseEvent&) override { showModal(); }
 
 private:
-    int             selectedAlgo  = 0;
-    AlgorithmModal* activeModal   = nullptr;
+    int selectedAlgo = 0;
+    ModalBackdrop<AlgorithmPickerPanel>* activeModal = nullptr;
 
     void showModal()
     {
@@ -264,18 +216,31 @@ private:
         auto* root = getTopLevelComponent();
         if (!root) return;
 
-        activeModal = new AlgorithmModal();
-        activeModal->setBounds(root->getLocalBounds());
-        activeModal->layoutPicker(selectedAlgo);
-
-        activeModal->picker.onSelect = [this](int algo)
+        auto panel = std::make_unique<AlgorithmPickerPanel>();
+        panel->selectedAlgo = selectedAlgo;
+        
+        panel->onSelect = [this](int algo)
         {
             setSelectedAlgorithm(algo);
             if (onChange) onChange(algo);
             closeModal();
         };
-        activeModal->onDismiss = [this]() { closeModal(); };
 
+        const int pw = juce::jmin(430, (int)(root->getWidth() * 0.65f));
+        const int ph = juce::jmin(250, (int)(root->getHeight() * 0.80f));
+
+        activeModal = new ModalBackdrop<AlgorithmPickerPanel>(
+            panel.release(),
+            [this]() { closeModal(); }
+        );
+        
+        activeModal->setBounds(root->getLocalBounds());
+        activeModal->pickerPanel->setBounds(
+            (activeModal->getWidth() - pw) / 2,
+            (activeModal->getHeight() - ph) / 2,
+            pw, ph
+        );
+        
         root->addAndMakeVisible(activeModal);
         activeModal->toFront(true);
     }
@@ -283,9 +248,7 @@ private:
     void closeModal()
     {
         if (!activeModal) return;
-        if (auto* p = activeModal->getParentComponent())
-            p->removeChildComponent(activeModal);
-        delete activeModal;
+        activeModal->dismiss();
         activeModal = nullptr;
     }
 };

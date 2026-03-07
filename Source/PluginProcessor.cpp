@@ -33,56 +33,75 @@ ARM2612AudioProcessor::createParameterLayout()
         juce::String pre = "OP" + juce::String(op + 1) + " ";
 
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_TL_ID[op], 1}, pre + "Level", 0, 127, defaultTL[op]));
+            juce::ParameterID{OP_TL_ID[op], 1}, pre + "TL", 0, 127, defaultTL[op],
+            juce::AudioParameterIntAttributes().withLabel("Total level attenuation")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_AR_ID[op], 1}, pre + "Attack",  0, 31, defaultAR[op]));
+            juce::ParameterID{OP_AR_ID[op], 1}, pre + "AR",  0, 31, defaultAR[op],
+            juce::AudioParameterIntAttributes().withLabel("Attack rate")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_DR_ID[op], 1}, pre + "Decay",   0, 31, defaultDR[op]));
+            juce::ParameterID{OP_DR_ID[op], 1}, pre + "DR",   0, 31, defaultDR[op],
+            juce::AudioParameterIntAttributes().withLabel("Decay rate")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_SR_ID[op], 1}, pre + "Sus.Rate",0, 31, defaultSR[op]));
+            juce::ParameterID{OP_SR_ID[op], 1}, pre + "SR",0, 31, defaultSR[op],
+            juce::AudioParameterIntAttributes().withLabel("Sustain rate (second decay)")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_SL_ID[op], 1}, pre + "Sus.Lvl", 0, 15, defaultSL[op]));
+            juce::ParameterID{OP_SL_ID[op], 1}, pre + "SL", 0, 15, defaultSL[op],
+            juce::AudioParameterIntAttributes().withLabel("Sustain level")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_RR_ID[op], 1}, pre + "Release", 0, 15, defaultRR[op]));
+            juce::ParameterID{OP_RR_ID[op], 1}, pre + "RR", 0, 15, defaultRR[op],
+            juce::AudioParameterIntAttributes().withLabel("Release rate")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_MUL_ID[op], 1}, pre + "Multi",  0, 15, defaultMUL[op]));
+            juce::ParameterID{OP_MUL_ID[op], 1}, pre + "MUL",  0, 15, defaultMUL[op],
+            juce::AudioParameterIntAttributes().withLabel("Frequency multiplier")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_DT_ID[op], 1},  pre + "Detune", -3, 3, defaultDT[op]));
+            juce::ParameterID{OP_DT_ID[op], 1},  pre + "DT", -3, 3, defaultDT[op],
+            juce::AudioParameterIntAttributes().withLabel("Detune")));
         params.push_back(std::make_unique<juce::AudioParameterInt>(
-            juce::ParameterID{OP_RS_ID[op], 1},  pre + "RateScale", 0, 3, defaultRS[op]));
+            juce::ParameterID{OP_RS_ID[op], 1},  pre + "RS", 0, 3, defaultRS[op],
+            juce::AudioParameterIntAttributes().withLabel("Rate scaling by pitch")));
         params.push_back(std::make_unique<juce::AudioParameterBool>(
-            juce::ParameterID{OP_AM_ID[op], 1},  pre + "AM Enable", defaultAM[op] != 0));
+            juce::ParameterID{OP_AM_ID[op], 1},  pre + "AM", defaultAM[op] != 0,
+            juce::AudioParameterBoolAttributes().withLabel("Amplitude modulation enable")));
         
         params.push_back(std::make_unique<juce::AudioParameterBool>(
-            juce::ParameterID{OP_SSG_EN_ID[op], 1}, pre + "SSG-EG Enable", defaultSSGEn[op] != 0));
+            juce::ParameterID{OP_SSG_EN_ID[op], 1}, pre + "SSG Enable", defaultSSGEn[op] != 0,
+            juce::AudioParameterBoolAttributes().withLabel("SSG envelope enable")));
         params.push_back(std::make_unique<juce::AudioParameterChoice>(
-            juce::ParameterID{OP_SSG_MODE_ID[op], 1}, pre + "SSG-EG Mode",
-            getSsgModeNames(), defaultSSGMode[op]));
+            juce::ParameterID{OP_SSG_MODE_ID[op], 1}, pre + "SSG",
+            getSsgModeNames(), defaultSSGMode[op],
+            juce::AudioParameterChoiceAttributes().withLabel("SSG envelope mode")));
     }
 
     // ── Global parameters ──────────────────────────────────────────────────────
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID{GLOBAL_ALGORITHM, 1}, "Algorithm",
-        getAlgorithmNames(), 4));  // default = algo 4
+        juce::ParameterID{GLOBAL_ALGORITHM, 1}, "ALG",
+        getAlgorithmNames(), 4,  // default = algo 4
+        juce::AudioParameterChoiceAttributes().withLabel("Operator routing topology")));
 
     params.push_back(std::make_unique<juce::AudioParameterInt>(
-        juce::ParameterID{GLOBAL_FEEDBACK, 1}, "Feedback", 0, 7, 5));
+        juce::ParameterID{GLOBAL_FEEDBACK, 1}, "FB", 0, 7, 5,
+        juce::AudioParameterIntAttributes().withLabel("Self feedback of operator 1")));
 
     params.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{GLOBAL_LFO_ENABLE, 1}, "LFO Enable", false));
+        juce::ParameterID{GLOBAL_LFO_ENABLE, 1}, "LFOEN", false,
+        juce::AudioParameterBoolAttributes().withLabel("Enables YM2612 global LFO generator")));
 
     params.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID{GLOBAL_LFO_FREQ, 1}, "LFO Freq",
-        getLfoFreqNames(), 0));  // default 3.98 Hz
+        juce::ParameterID{GLOBAL_LFO_FREQ, 1}, "LFOFREQ",
+        getLfoFreqNames(), 0,  // default 3.98 Hz
+        juce::AudioParameterChoiceAttributes().withLabel("Global LFO oscillator frequency")));
 
     params.push_back(std::make_unique<juce::AudioParameterInt>(
-        juce::ParameterID{GLOBAL_AMS, 1}, "AMS (AM Sens)", 0, 3, 0));
+        juce::ParameterID{GLOBAL_AMS, 1}, "AMS", 0, 3, 0,
+        juce::AudioParameterIntAttributes().withLabel("LFO amplitude modulation sensitivity")));
 
     params.push_back(std::make_unique<juce::AudioParameterInt>(
-        juce::ParameterID{GLOBAL_FMS, 1}, "FMS (FM Sens)", 0, 7, 0));
+        juce::ParameterID{GLOBAL_FMS, 1}, "FMS", 0, 7, 0,
+        juce::AudioParameterIntAttributes().withLabel("LFO pitch modulation sensitivity")));
 
     params.push_back(std::make_unique<juce::AudioParameterInt>(
-        juce::ParameterID{GLOBAL_OCTAVE, 1}, "Octave", -2, 2, 0));
+        juce::ParameterID{GLOBAL_OCTAVE, 1}, "BLOCK", -2, 2, 0,
+        juce::AudioParameterIntAttributes().withLabel("Frequency block (octave)")));
 
     return { params.begin(), params.end() };
 }

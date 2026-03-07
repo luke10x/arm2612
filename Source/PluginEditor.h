@@ -210,7 +210,7 @@ private:
 
     static constexpr int NUM_SLIDERS = 8;  // TL, AR, DR, SL, SR, RR, MUL, DT
     static constexpr const char* SLIDER_LABELS[NUM_SLIDERS] = {
-        "Level", "Attack", "Decay", "Sus.Lvl", "Sus.Rate", "Release", "Multi", "Detune"
+        "TL", "AR", "DR", "SL", "SR", "RR", "MUL", "DT"
     };
 
     struct OpColumn {
