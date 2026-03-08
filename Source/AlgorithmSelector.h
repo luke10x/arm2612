@@ -186,10 +186,7 @@ class AlgorithmSelector : public juce::Component
 public:
     std::function<void(int)> onChange;
 
-    AlgorithmSelector() 
-    { 
-        // Component::setTooltip("Operator routing topology");
-    }
+    AlgorithmSelector() = default;
 
     void setSelectedAlgorithm (int a) { selectedAlgo=juce::jlimit(0,7,a); repaint(); }
     int  getSelectedAlgorithm() const  { return selectedAlgo; }
