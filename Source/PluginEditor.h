@@ -172,6 +172,7 @@ public:
     void resized() override;
     
     void showSettings();  // Show settings modal
+    void updateTooltips(bool enabled);  // Enable/disable all tooltips
     
     // AudioProcessorValueTreeState::Listener
     void parameterChanged(const juce::String& parameterID, float newValue) override;

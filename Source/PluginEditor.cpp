@@ -59,13 +59,6 @@ ARM2612AudioProcessorEditor::ARM2612AudioProcessorEditor(
     setSize(720, totalH);
     setResizable(false, false);  // Non-resizable
     
-    // Set tooltips on global controls
-    feedbackSlider.setTooltip("Self feedback of operator 1");
-    octaveSlider.setTooltip("Frequency block (octave)");
-    lfoFreqBox.setTooltip("Global LFO oscillator frequency");
-    amsSlider.setTooltip("LFO amplitude modulation sensitivity");
-    fmsSlider.setTooltip("LFO pitch modulation sensitivity");
-    
     addAndMakeVisible(oscilloscope);
     
     // Version label (small, bottom of column 4)
@@ -81,6 +74,9 @@ ARM2612AudioProcessorEditor::ARM2612AudioProcessorEditor(
     
     // Initialize tooltip window
     tooltipWindow.setMillisecondsBeforeTipAppears(500);  // 500ms delay
+    
+    // Initialize all tooltips based on current setting
+    updateTooltips(tooltipsEnabled);
 
     startTimerHz(30);
 }
@@ -121,7 +117,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
             param->setValueNotifyingHost(param->convertTo0to1(float(algo)));
     };
     addAndMakeVisible(algorithmSelector);
-    algorithmSelector.setTooltip("Operator routing topology");
     
     // Add listener for algorithm parameter changes
     audioProcessor.apvts.addParameterListener(GLOBAL_ALGORITHM, this);
@@ -137,7 +132,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalFb.label.setJustificationType(juce::Justification::centredLeft);
     globalFb.label.setFont(juce::Font(11.0f));
     globalFb.label.setColour(juce::Label::textColourId, dim);
-    globalFb.label.setTooltip("Self feedback of operator 1");
     addAndMakeVisible(globalFb.label);
     addAndMakeVisible(feedbackSlider);
 
@@ -150,7 +144,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalLfoFreq.label.setJustificationType(juce::Justification::centredLeft);
     globalLfoFreq.label.setFont(juce::Font(10.0f));
     globalLfoFreq.label.setColour(juce::Label::textColourId, dim);
-    globalLfoFreq.label.setTooltip("Global LFO oscillator frequency");
     addAndMakeVisible(globalLfoFreq.label);
     addAndMakeVisible(lfoFreqBox);
 
@@ -165,7 +158,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalAms.label.setJustificationType(juce::Justification::centredRight);
     globalAms.label.setFont(juce::Font(11.0f));
     globalAms.label.setColour(juce::Label::textColourId, dim);
-    globalAms.label.setTooltip("LFO amplitude modulation sensitivity");
     addAndMakeVisible(globalAms.label);
     addAndMakeVisible(amsSlider);
 
@@ -180,7 +172,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalFms.label.setJustificationType(juce::Justification::centredRight);
     globalFms.label.setFont(juce::Font(11.0f));
     globalFms.label.setColour(juce::Label::textColourId, dim);
-    globalFms.label.setTooltip("LFO pitch modulation sensitivity");
     addAndMakeVisible(globalFms.label);
     addAndMakeVisible(fmsSlider);
 
@@ -195,7 +186,6 @@ void ARM2612AudioProcessorEditor::setupGlobalControls()
     globalOct.label.setJustificationType(juce::Justification::centredLeft);
     globalOct.label.setFont(juce::Font(11.0f));
     globalOct.label.setColour(juce::Label::textColourId, dim);
-    globalOct.label.setTooltip("Frequency block (octave)");
     addAndMakeVisible(globalOct.label);
     addAndMakeVisible(octaveSlider);
     
@@ -271,7 +261,7 @@ void ARM2612AudioProcessorEditor::showSettings()
     
     panel->onTooltipsChanged = [this](bool enabled) {
         tooltipsEnabled = enabled;
-        tooltipWindow.setEnabled(enabled);
+        updateTooltips(enabled);
     };
     
     auto* modal = new SettingsModal(panel, []() {});
@@ -293,6 +283,68 @@ void ARM2612AudioProcessorEditor::showSettings()
     root->addAndMakeVisible(modal);
     modal->toFront(true);
     modal->selfReference.reset(modal);
+}
+
+void ARM2612AudioProcessorEditor::updateTooltips(bool enabled)
+{
+    // Global controls
+    feedbackSlider.setTooltip(enabled ? "Self feedback of operator 1" : "");
+    octaveSlider.setTooltip(enabled ? "Frequency block (octave)" : "");
+    lfoFreqBox.setTooltip(enabled ? "Global LFO oscillator frequency" : "");
+    amsSlider.setTooltip(enabled ? "LFO amplitude modulation sensitivity" : "");
+    fmsSlider.setTooltip(enabled ? "LFO pitch modulation sensitivity" : "");
+    
+    // Global labels
+    globalFb.label.setTooltip(enabled ? "Self feedback of operator 1" : "");
+    globalLfoFreq.label.setTooltip(enabled ? "Global LFO oscillator frequency" : "");
+    globalAms.label.setTooltip(enabled ? "LFO amplitude modulation sensitivity" : "");
+    globalFms.label.setTooltip(enabled ? "LFO pitch modulation sensitivity" : "");
+    globalOct.label.setTooltip(enabled ? "Frequency block (octave)" : "");
+    
+    // Algorithm selector
+    algorithmSelector.setTooltip(enabled ? "Operator routing topology" : "");
+    
+    // Operator controls - need to update all sliders and labels
+    for (int op = 0; op < 4; ++op)
+    {
+        // SSG selector
+        ops[op].ssgModeSelector.setTooltip(enabled ? "SSG envelope mode" : "");
+        
+        // Get tooltips from parameters
+        auto setSliderTooltip = [this, enabled](juce::Slider& slider, juce::Label& label, const juce::String& paramId)
+        {
+            juce::String tooltip = "";
+            if (enabled)
+            {
+                if (auto* param = audioProcessor.apvts.getParameter(paramId))
+                    tooltip = param->getLabel();
+            }
+            slider.setTooltip(tooltip);
+            label.setTooltip(tooltip);
+        };
+        
+        // TL, AR, DR, SR, SL, RR, MUL, DT
+        setSliderTooltip(ops[op].rows[0].slider, ops[op].rows[0].label, OP_TL_ID[op]);
+        setSliderTooltip(ops[op].rows[1].slider, ops[op].rows[1].label, OP_AR_ID[op]);
+        setSliderTooltip(ops[op].rows[2].slider, ops[op].rows[2].label, OP_DR_ID[op]);
+        setSliderTooltip(ops[op].rows[3].slider, ops[op].rows[3].label, OP_SL_ID[op]);
+        setSliderTooltip(ops[op].rows[4].slider, ops[op].rows[4].label, OP_SR_ID[op]);
+        setSliderTooltip(ops[op].rows[5].slider, ops[op].rows[5].label, OP_RR_ID[op]);
+        setSliderTooltip(ops[op].rows[6].slider, ops[op].rows[6].label, OP_MUL_ID[op]);
+        setSliderTooltip(ops[op].rows[7].slider, ops[op].rows[7].label, OP_DT_ID[op]);
+        
+        // Rate Scale
+        setSliderTooltip(ops[op].rsRow.slider, ops[op].rsRow.label, OP_RS_ID[op]);
+        
+        // AM toggle
+        juce::String amTooltip = "";
+        if (enabled)
+        {
+            if (auto* param = audioProcessor.apvts.getParameter(OP_AM_ID[op]))
+                amTooltip = param->getLabel();
+        }
+        ops[op].amRow.toggle.setTooltip(amTooltip);
+    }
 }
 
 void ARM2612AudioProcessorEditor::styleColumn(OpColumn& col, int opIdx)
@@ -333,7 +385,6 @@ void ARM2612AudioProcessorEditor::styleColumn(OpColumn& col, int opIdx)
             param->setValueNotifyingHost(param->convertTo0to1(float(mode)));
     };
     addAndMakeVisible(col.ssgModeSelector);
-    col.ssgModeSelector.setTooltip("SSG envelope mode");
     
     // Add listener for SSG-EG parameter changes
     audioProcessor.apvts.addParameterListener(OP_SSG_MODE_ID[opIdx], this);
@@ -353,18 +404,10 @@ void ARM2612AudioProcessorEditor::setupSlider(SliderRow& row, const juce::String
     sl.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     sl.setColour(juce::Slider::textBoxBackgroundColourId, panel);
     addAndMakeVisible(sl);
-    
-    // Set tooltip from parameter's label attribute
-    juce::String tooltip = "";
-    if (auto* param = audioProcessor.apvts.getParameter(paramId))
-        tooltip = param->getLabel();
-    
-    sl.setTooltip(tooltip);
 
     row.label.setFont(juce::Font(10.5f));
     row.label.setColour(juce::Label::textColourId, dim);
     row.label.setJustificationType(juce::Justification::centredRight);
-    row.label.setTooltip(tooltip);  // Also on label
     addAndMakeVisible(row.label);
 
     row.att = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -376,10 +419,6 @@ void ARM2612AudioProcessorEditor::setupToggle(ToggleRow& row, const juce::String
 {
     row.toggle.setOperatorColor(colour);  // Set color for custom AM button
     addAndMakeVisible(row.toggle);
-    
-    // Set tooltip from parameter's label attribute
-    if (auto* param = audioProcessor.apvts.getParameter(paramId))
-        row.toggle.setTooltip(param->getLabel());
 
     row.label.setFont(juce::Font(10.5f));
     row.label.setColour(juce::Label::textColourId, dim);
