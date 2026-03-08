@@ -107,12 +107,12 @@ public:
     }
     
     // ListBoxModel methods
-    int getNumRows()
+    int getNumRows() override
     {
         return sizeof(kBuiltInPatches) / sizeof(kBuiltInPatches[0]);
     }
     
-    void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
+    void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override
     {
         if (rowNumber < 0 || rowNumber >= getNumRows())
             return;
@@ -138,13 +138,13 @@ public:
         g.drawText("[" + patch.category + "]", width - 110, 0, 100, height, juce::Justification::centredLeft);
     }
     
-    void listBoxItemClicked(int row, const juce::MouseEvent&)
+    void listBoxItemClicked(int row, const juce::MouseEvent&) override
     {
         if (onPatchSelected)
             onPatchSelected(row);
     }
     
-    void listBoxItemDoubleClicked(int row, const juce::MouseEvent&)
+    void listBoxItemDoubleClicked(int row, const juce::MouseEvent&) override
     {
         if (onPatchSelected)
             onPatchSelected(row);
