@@ -4,6 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "Ym2612Voice.h"
 #include "SynthSound.h"
+#include "BuiltInPatches.h"
 
 static constexpr int NUM_VOICES = 6;
 
@@ -110,6 +111,10 @@ public:
     // Instrument name (not automated, stored in state)
     void setInstrumentName(const juce::String& name);
     juce::String getInstrumentName() const;
+    
+    // Patch loading/retrieval
+    void getCurrentPatch(YM2612Patch& outPatch, int& outBlock, int& outLfoEnable, int& outLfoFreq) const;
+    void loadPatch(const YM2612Patch& patch, int block, int lfoEnable, int lfoFreq);
     
     // Oscilloscope support - FIFO for audio samples
     juce::AbstractFifo& getAudioFifo() { return audioFifo; }

@@ -12,8 +12,16 @@ class PatchesPanel : public juce::Component, public juce::ListBoxModel
 public:
     std::function<void()> onClose;
     std::function<void(int)> onPatchSelected;
+    std::function<void(const YM2612Patch&, int, int, int)> onPatchLoaded;  // Load patch into synth
     
-    PatchesPanel() : patchList("Patches", nullptr), selectedPatch(0), codeModified(false)
+    PatchesPanel(const YM2612Patch& currentPatch, int currentBlock, int currentLfoEnable, int currentLfoFreq)
+        : patchList("Patches", nullptr), 
+          selectedPatch(0), 
+          codeModified(false),
+          originalPatch(currentPatch),
+          originalBlock(currentBlock),
+          originalLfoEnable(currentLfoEnable),
+          originalLfoFreq(currentLfoFreq)
     {
         setInterceptsMouseClicks(true, true);
         
@@ -37,6 +45,23 @@ public:
         };
         addAndMakeVisible(codeDisplay);
         
+        // Original patch display (read-only)
+        originalPatchDisplay.setMultiLine(true);
+        originalPatchDisplay.setReadOnly(true);
+        originalPatchDisplay.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 10.0f, juce::Font::plain));
+        originalPatchDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xFF0D0D1A));
+        originalPatchDisplay.setColour(juce::TextEditor::textColourId, juce::Colour(0xFF888888));
+        originalPatchDisplay.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xFF252540));
+        originalPatchDisplay.setText(PatchSerializer::serializePatch(originalPatch, "ORIGINAL_PATCH",
+                                                                      originalBlock, originalLfoEnable, originalLfoFreq));
+        addAndMakeVisible(originalPatchDisplay);
+        
+        // Original patch label
+        originalPatchLabel.setText("Original Patch (when panel opened):", juce::dontSendNotification);
+        originalPatchLabel.setFont(juce::Font("Courier New", 10.0f, juce::Font::bold));
+        originalPatchLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF888888));
+        addAndMakeVisible(originalPatchLabel);
+        
         // Error display
         errorLabel.setFont(juce::Font("Courier New", 10.0f, juce::Font::plain));
         errorLabel.setColour(juce::Label::textColourId, juce::Colour(0xFFFF4444));
@@ -51,6 +76,34 @@ public:
         validateButton.onClick = [this]() { validateAndLoadPatch(); };
         addAndMakeVisible(validateButton);
         
+        // Copy Code button
+        copyButton.setButtonText("Copy All Code");
+        copyButton.onClick = [this]() { 
+            juce::SystemClipboard::copyTextToClipboard(codeDisplay.getText());
+            errorLabel.setText("✓ Code copied to clipboard", juce::dontSendNotification);
+            errorLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF00FF88));
+        };
+        addAndMakeVisible(copyButton);
+        
+        // OK button (accept current patch and close)
+        okButton.setButtonText("OK");
+        okButton.onClick = [this]() {
+            if (onClose)
+                onClose();
+        };
+        addAndMakeVisible(okButton);
+        
+        // Cancel button (restore original patch and close)
+        cancelButton.setButtonText("Cancel");
+        cancelButton.onClick = [this]() {
+            // Restore original patch
+            if (onPatchLoaded)
+                onPatchLoaded(originalPatch, originalBlock, originalLfoEnable, originalLfoFreq);
+            if (onClose)
+                onClose();
+        };
+        addAndMakeVisible(cancelButton);
+        
         // Patch list (right side)
         patchList.setModel(this);
         patchList.setRowHeight(28);
@@ -58,14 +111,6 @@ public:
         patchList.setColour(juce::ListBox::outlineColourId, juce::Colour(0xFF252540));
         patchList.selectRow(0);
         addAndMakeVisible(patchList);
-        
-        // Close button
-        closeButton.setButtonText("Close");
-        closeButton.onClick = [this]() {
-            if (onClose)
-                onClose();
-        };
-        addAndMakeVisible(closeButton);
     }
 
     void paint(juce::Graphics& g) override
@@ -91,19 +136,30 @@ public:
         bounds.removeFromTop(40); // Title area
         bounds.removeFromTop(8);  // Spacing
         
-        // Close button at bottom
-        auto buttonArea = bounds.removeFromBottom(36);
-        closeButton.setBounds(buttonArea.withSizeKeepingCentre(120, 36));
+        // Button row at bottom: OK, Cancel, Copy
+        auto buttonRow = bounds.removeFromBottom(36);
+        cancelButton.setBounds(buttonRow.removeFromLeft(100));
+        buttonRow.removeFromLeft(8);
+        okButton.setBounds(buttonRow.removeFromLeft(100));
+        buttonRow.removeFromLeft(16);
+        copyButton.setBounds(buttonRow.removeFromLeft(120));
         
-        bounds.removeFromBottom(8); // Space above button
+        bounds.removeFromBottom(8); // Space above buttons
         
-        // Validate button and error label above close button
+        // Validate button and error label
         auto validateArea = bounds.removeFromBottom(30);
         validateButton.setBounds(validateArea.removeFromLeft(140));
         validateArea.removeFromLeft(8);
         errorLabel.setBounds(validateArea);
         
         bounds.removeFromBottom(8); // Space above validate section
+        
+        // Original patch section at bottom
+        auto originalArea = bounds.removeFromBottom(120);
+        originalPatchLabel.setBounds(originalArea.removeFromTop(20));
+        originalPatchDisplay.setBounds(originalArea);
+        
+        bounds.removeFromBottom(8); // Space above original section
         
         // Split remaining area: code on left (60%), list on right (40%)
         auto listArea = bounds.removeFromRight(bounds.getWidth() * 0.4f);
@@ -151,6 +207,10 @@ public:
             codeModified = false;
             validateButton.setEnabled(false);
             errorLabel.setText("", juce::dontSendNotification);
+            
+            // Load patch into synth immediately
+            if (onPatchLoaded)
+                onPatchLoaded(*entry.patch, entry.block, entry.lfoEnable, entry.lfoFreq);
         }
         
         if (onPatchSelected)
@@ -182,8 +242,10 @@ public:
             codeModified = false;
             validateButton.setEnabled(false);
             
-            // TODO: Actually load the parsed patch into the synth
-            // For now just verify round-trip serialization works
+            // Load the parsed patch into the synth immediately
+            if (onPatchLoaded)
+                onPatchLoaded(parsedPatch, parsedBlock, parsedLfoEnable, parsedLfoFreq);
+            
             DBG("Parsed patch - ALG:" << parsedPatch.ALG << " FB:" << parsedPatch.FB 
                 << " BLOCK:" << parsedBlock << " LFO:" << parsedLfoEnable << "/" << parsedLfoFreq);
         }
@@ -200,11 +262,21 @@ public:
 private:
     juce::ListBox patchList;
     juce::TextEditor codeDisplay;
-    juce::TextButton closeButton;
+    juce::TextEditor originalPatchDisplay;
+    juce::Label originalPatchLabel;
     juce::TextButton validateButton;
+    juce::TextButton copyButton;
+    juce::TextButton okButton;
+    juce::TextButton cancelButton;
     juce::Label errorLabel;
     int selectedPatch;
     bool codeModified;
+    
+    // Original patch state (when panel was opened)
+    YM2612Patch originalPatch;
+    int originalBlock;
+    int originalLfoEnable;
+    int originalLfoFreq;
 };
 
 // =============================================================================

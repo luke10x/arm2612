@@ -295,24 +295,28 @@ void ARM2612AudioProcessorEditor::showPatches()
     auto* root = getTopLevelComponent();
     if (!root) return;
     
-    auto* panel = new PatchesPanel();
+    // Get current patch state
+    YM2612Patch currentPatch;
+    int currentBlock, currentLfoEnable, currentLfoFreq;
+    audioProcessor.getCurrentPatch(currentPatch, currentBlock, currentLfoEnable, currentLfoFreq);
+    
+    auto* panel = new PatchesPanel(currentPatch, currentBlock, currentLfoEnable, currentLfoFreq);
     
     panel->onPatchSelected = [this](int patchIndex) {
-        // TODO: Load the selected patch
-        // For now, just show which patch was selected
         DBG("Selected patch: " << kBuiltInPatches[patchIndex].name);
-        juce::AlertWindow::showMessageBoxAsync(
-            juce::AlertWindow::InfoIcon,
-            "Patch Selected",
-            juce::String("Selected: ") + kBuiltInPatches[patchIndex].name + 
-            "\n(Patch loading not yet implemented)");
+    };
+    
+    // Wire up patch loading callback
+    panel->onPatchLoaded = [this](const YM2612Patch& patch, int block, int lfoEnable, int lfoFreq) {
+        audioProcessor.loadPatch(patch, block, lfoEnable, lfoFreq);
+        DBG("Loaded patch into synth");
     };
     
     auto* modal = new PatchesModal(panel, []() {});
     modal->setBounds(root->getLocalBounds());
     
     const int pw = juce::jmin(700, (int)(root->getWidth() * 0.90f));  // Wider for code
-    const int ph = juce::jmin(500, (int)(root->getHeight() * 0.75f));
+    const int ph = juce::jmin(600, (int)(root->getHeight() * 0.85f));  // Taller for original patch display
     
     panel->setBounds(
         (modal->getWidth() - pw) / 2,

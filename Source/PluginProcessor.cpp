@@ -144,6 +144,77 @@ juce::String ARM2612AudioProcessor::getInstrumentName() const
     return instrumentName;
 }
 
+void ARM2612AudioProcessor::getCurrentPatch(YM2612Patch& outPatch, int& outBlock, int& outLfoEnable, int& outLfoFreq) const
+{
+    // Read current parameter values into patch struct
+    outPatch.ALG = (int)apvts.getRawParameterValue(GLOBAL_ALGORITHM)->load();
+    outPatch.FB  = (int)apvts.getRawParameterValue(GLOBAL_FEEDBACK)->load();
+    outPatch.AMS = (int)apvts.getRawParameterValue(GLOBAL_AMS)->load();
+    outPatch.FMS = (int)apvts.getRawParameterValue(GLOBAL_FMS)->load();
+    
+    // Read operator parameters
+    for (int op = 0; op < 4; ++op)
+    {
+        outPatch.op[op].DT  = (int)apvts.getRawParameterValue(OP_DT_ID[op])->load();
+        outPatch.op[op].MUL = (int)apvts.getRawParameterValue(OP_MUL_ID[op])->load();
+        outPatch.op[op].TL  = (int)apvts.getRawParameterValue(OP_TL_ID[op])->load();
+        outPatch.op[op].RS  = (int)apvts.getRawParameterValue(OP_RS_ID[op])->load();
+        outPatch.op[op].AR  = (int)apvts.getRawParameterValue(OP_AR_ID[op])->load();
+        outPatch.op[op].AM  = (int)apvts.getRawParameterValue(OP_AM_ID[op])->load();
+        outPatch.op[op].DR  = (int)apvts.getRawParameterValue(OP_DR_ID[op])->load();
+        outPatch.op[op].SR  = (int)apvts.getRawParameterValue(OP_SR_ID[op])->load();
+        outPatch.op[op].SL  = (int)apvts.getRawParameterValue(OP_SL_ID[op])->load();
+        outPatch.op[op].RR  = (int)apvts.getRawParameterValue(OP_RR_ID[op])->load();
+        
+        // Combine SSG enable and mode into single SSG value (0-8)
+        int ssgEn   = (int)apvts.getRawParameterValue(OP_SSG_EN_ID[op])->load();
+        int ssgMode = (int)apvts.getRawParameterValue(OP_SSG_MODE_ID[op])->load();
+        outPatch.op[op].SSG = ssgEn ? ssgMode : 0;
+    }
+    
+    // Read global parameters
+    outBlock = (int)apvts.getRawParameterValue(GLOBAL_OCTAVE)->load();
+    outLfoEnable = (int)apvts.getRawParameterValue(GLOBAL_LFO_ENABLE)->load();
+    outLfoFreq = (int)apvts.getRawParameterValue(GLOBAL_LFO_FREQ)->load();
+}
+
+void ARM2612AudioProcessor::loadPatch(const YM2612Patch& patch, int block, int lfoEnable, int lfoFreq)
+{
+    // Set global parameters
+    apvts.getParameter(GLOBAL_ALGORITHM)->setValueNotifyingHost(patch.ALG / 7.0f);
+    apvts.getParameter(GLOBAL_FEEDBACK)->setValueNotifyingHost(patch.FB / 7.0f);
+    apvts.getParameter(GLOBAL_AMS)->setValueNotifyingHost(patch.AMS / 3.0f);
+    apvts.getParameter(GLOBAL_FMS)->setValueNotifyingHost(patch.FMS / 7.0f);
+    
+    apvts.getParameter(GLOBAL_OCTAVE)->setValueNotifyingHost(block / 7.0f);
+    apvts.getParameter(GLOBAL_LFO_ENABLE)->setValueNotifyingHost(lfoEnable);
+    apvts.getParameter(GLOBAL_LFO_FREQ)->setValueNotifyingHost(lfoFreq / 7.0f);
+    
+    // Set operator parameters
+    for (int op = 0; op < 4; ++op)
+    {
+        apvts.getParameter(OP_DT_ID[op])->setValueNotifyingHost((patch.op[op].DT + 3) / 6.0f); // DT is -3 to +3
+        apvts.getParameter(OP_MUL_ID[op])->setValueNotifyingHost(patch.op[op].MUL / 15.0f);
+        apvts.getParameter(OP_TL_ID[op])->setValueNotifyingHost(patch.op[op].TL / 127.0f);
+        apvts.getParameter(OP_RS_ID[op])->setValueNotifyingHost(patch.op[op].RS / 3.0f);
+        apvts.getParameter(OP_AR_ID[op])->setValueNotifyingHost(patch.op[op].AR / 31.0f);
+        apvts.getParameter(OP_AM_ID[op])->setValueNotifyingHost(patch.op[op].AM);
+        apvts.getParameter(OP_DR_ID[op])->setValueNotifyingHost(patch.op[op].DR / 31.0f);
+        apvts.getParameter(OP_SR_ID[op])->setValueNotifyingHost(patch.op[op].SR / 31.0f);
+        apvts.getParameter(OP_SL_ID[op])->setValueNotifyingHost(patch.op[op].SL / 15.0f);
+        apvts.getParameter(OP_RR_ID[op])->setValueNotifyingHost(patch.op[op].RR / 15.0f);
+        
+        // Split SSG value back into enable and mode
+        int ssgEn = (patch.op[op].SSG > 0) ? 1 : 0;
+        int ssgMode = patch.op[op].SSG;
+        apvts.getParameter(OP_SSG_EN_ID[op])->setValueNotifyingHost(ssgEn);
+        apvts.getParameter(OP_SSG_MODE_ID[op])->setValueNotifyingHost(ssgMode / 8.0f);
+    }
+    
+    // Push to voices
+    pushParamsToVoices();
+}
+
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool ARM2612AudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
