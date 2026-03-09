@@ -1,91 +1,8 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-
-// =============================================================================
-// Built-in YM2612 Patches
-// =============================================================================
-struct BuiltInPatch
-{
-    juce::String name;
-    juce::String code;  // C++ code for the patch
-};
-
-static const BuiltInPatch kBuiltInPatches[] = {
-    // Bass
-    { 
-        "Slap Bass",
-        "constexpr YM2612Patch SLAP_BASS =\n"
-        "{\n"
-        "    .ALG = 4,\n"
-        "    .FB  = 5,\n"
-        "    .AMS = 2,\n"
-        "    .FMS = 3,\n"
-        "\n"
-        "    .op =\n"
-        "    {\n"
-        "        {3,1,34,0,31,0,10,6,4,7,0},\n"
-        "        {0,2,18,1,25,0,12,5,5,6,0},\n"
-        "        {0,1,0,0,31,0,6,3,6,5,0},\n"
-        "        {0,1,0,0,31,0,7,2,5,5,0}\n"
-        "    }\n"
-        "};"
-    },
-    { 
-        "Synth Bass",
-        "constexpr YM2612Patch SYNTH_BASS =\n"
-        "{\n"
-        "    .ALG = 5,\n"
-        "    .FB  = 7,\n"
-        "    .AMS = 0,\n"
-        "    .FMS = 4,\n"
-        "\n"
-        "    .op =\n"
-        "    {\n"
-        "        {0,1,20,0,31,0,15,7,3,8,0},\n"
-        "        {0,1,15,0,28,0,12,6,4,7,0},\n"
-        "        {0,0,0,0,31,0,0,0,0,0,0},\n"
-        "        {0,0,0,0,31,0,0,0,0,0,0}\n"
-        "    }\n"
-        "};"
-    },
-    { 
-        "Electric Bass",
-        "constexpr YM2612Patch ELECTRIC_BASS =\n"
-        "{\n"
-        "    .ALG = 4,\n"
-        "    .FB  = 6,\n"
-        "    .AMS = 1,\n"
-        "    .FMS = 2,\n"
-        "\n"
-        "    .op =\n"
-        "    {\n"
-        "        {2,1,28,0,31,0,12,5,4,6,0},\n"
-        "        {0,1,22,0,26,0,10,4,5,5,0},\n"
-        "        {0,1,0,0,31,0,5,3,6,4,0},\n"
-        "        {0,0,0,0,31,0,0,0,0,0,0}\n"
-        "    }\n"
-        "};"
-    },
-    { 
-        "Acoustic Bass",
-        "constexpr YM2612Patch ACOUSTIC_BASS =\n"
-        "{\n"
-        "    .ALG = 2,\n"
-        "    .FB  = 3,\n"
-        "    .AMS = 0,\n"
-        "    .FMS = 1,\n"
-        "\n"
-        "    .op =\n"
-        "    {\n"
-        "        {1,1,24,0,30,0,8,4,3,5,0},\n"
-        "        {0,2,16,1,24,0,10,5,4,6,0},\n"
-        "        {0,1,12,0,28,0,6,3,5,4,0},\n"
-        "        {0,0,0,0,31,0,0,0,0,0,0}\n"
-        "    }\n"
-        "};"
-    },
-};
+#include "BuiltInPatches.h"
+#include "PatchSerializer.h"
 
 // =============================================================================
 // PatchesPanel - List of built-in patches with code preview
@@ -103,11 +20,16 @@ public:
         // Code display (left side) - now editable
         codeDisplay.setMultiLine(true);
         codeDisplay.setReadOnly(false);  // Editable
+        codeDisplay.setReturnKeyStartsNewLine(true);  // Enable enter key
         codeDisplay.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
         codeDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xFF0D0D1A));
         codeDisplay.setColour(juce::TextEditor::textColourId, juce::Colour(0xFF00D4AA));
         codeDisplay.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xFF252540));
-        codeDisplay.setText(kBuiltInPatches[0].code);
+        
+        // Serialize first patch to display
+        codeDisplay.setText(PatchSerializer::serializePatch(*kBuiltInPatches[0].patch, 
+                                                            kBuiltInPatches[0].name));
+        
         codeDisplay.onTextChange = [this]() { 
             codeModified = true; 
             validateButton.setEnabled(true);
@@ -193,7 +115,7 @@ public:
     // ListBoxModel methods
     int getNumRows() override
     {
-        return sizeof(kBuiltInPatches) / sizeof(kBuiltInPatches[0]);
+        return kNumBuiltInPatches;
     }
     
     void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override
@@ -222,7 +144,8 @@ public:
         if (row >= 0 && row < getNumRows())
         {
             selectedPatch = row;
-            codeDisplay.setText(kBuiltInPatches[row].code);
+            auto& entry = kBuiltInPatches[row];
+            codeDisplay.setText(PatchSerializer::serializePatch(*entry.patch, entry.name));
             codeModified = false;
             validateButton.setEnabled(false);
             errorLabel.setText("", juce::dontSendNotification);
@@ -245,16 +168,19 @@ public:
         juce::String code = codeDisplay.getText();
         juce::String error;
         int errorLine = 0, errorCol = 0;
+        YM2612Patch parsedPatch;
         
-        if (parsePatchCode(code, error, errorLine, errorCol))
+        if (PatchSerializer::parsePatch(code, parsedPatch, error, errorLine, errorCol))
         {
-            // Success
+            // Success - patch parsed correctly
             errorLabel.setText("✓ Patch valid and loaded", juce::dontSendNotification);
             errorLabel.setColour(juce::Label::textColourId, juce::Colour(0xFF00FF88));
             codeModified = false;
             validateButton.setEnabled(false);
             
             // TODO: Actually load the parsed patch into the synth
+            // For now just verify round-trip serialization works
+            DBG("Parsed patch - ALG:" << parsedPatch.ALG << " FB:" << parsedPatch.FB);
         }
         else
         {
@@ -264,186 +190,6 @@ public:
                                juce::dontSendNotification);
             errorLabel.setColour(juce::Label::textColourId, juce::Colour(0xFFFF4444));
         }
-    }
-    
-    bool parsePatchCode(const juce::String& code, juce::String& error, int& errorLine, int& errorCol)
-    {
-        // Simple parser for YM2612Patch struct format
-        auto lines = juce::StringArray::fromLines(code);
-        
-        errorLine = 1;
-        errorCol = 1;
-        
-        // Track required fields
-        bool foundALG = false, foundFB = false, foundAMS = false, foundFMS = false;
-        bool foundOp = false;
-        int opCount = 0;
-        
-        for (int i = 0; i < lines.size(); ++i)
-        {
-            auto line = lines[i].trim();
-            errorLine = i + 1;
-            
-            // Skip empty lines and comments
-            if (line.isEmpty() || line.startsWith("//"))
-                continue;
-            
-            // Check for opening brace
-            if (line.contains("constexpr") && line.contains("YM2612Patch"))
-                continue;
-                
-            if (line == "{")
-                continue;
-                
-            if (line == "};")
-                continue;
-            
-            // Parse .ALG = value
-            if (line.startsWith(".ALG"))
-            {
-                if (!parseIntField(line, ".ALG", 0, 7, error, errorCol))
-                    return false;
-                foundALG = true;
-                continue;
-            }
-            
-            // Parse .FB = value
-            if (line.startsWith(".FB"))
-            {
-                if (!parseIntField(line, ".FB", 0, 7, error, errorCol))
-                    return false;
-                foundFB = true;
-                continue;
-            }
-            
-            // Parse .AMS = value
-            if (line.startsWith(".AMS"))
-            {
-                if (!parseIntField(line, ".AMS", 0, 3, error, errorCol))
-                    return false;
-                foundAMS = true;
-                continue;
-            }
-            
-            // Parse .FMS = value
-            if (line.startsWith(".FMS"))
-            {
-                if (!parseIntField(line, ".FMS", 0, 7, error, errorCol))
-                    return false;
-                foundFMS = true;
-                continue;
-            }
-            
-            // Parse .op = section
-            if (line.startsWith(".op"))
-            {
-                foundOp = true;
-                continue;
-            }
-            
-            // Parse operator arrays like {3,1,34,0,31,0,10,6,4,7,0}
-            if (foundOp && line.startsWith("{") && line.contains("}"))
-            {
-                if (!parseOperatorArray(line, error, errorCol))
-                    return false;
-                opCount++;
-                continue;
-            }
-        }
-        
-        // Check all required fields are present
-        if (!foundALG)
-        {
-            error = ".ALG field required";
-            return false;
-        }
-        if (!foundFB)
-        {
-            error = ".FB field required";
-            return false;
-        }
-        if (!foundAMS)
-        {
-            error = ".AMS field required";
-            return false;
-        }
-        if (!foundFMS)
-        {
-            error = ".FMS field required";
-            return false;
-        }
-        if (!foundOp)
-        {
-            error = ".op array required";
-            return false;
-        }
-        if (opCount != 4)
-        {
-            error = juce::String::formatted("Expected 4 operators, found %d", opCount);
-            return false;
-        }
-        
-        return true;
-    }
-    
-    bool parseIntField(const juce::String& line, const juce::String& fieldName, 
-                       int minVal, int maxVal, juce::String& error, int& errorCol)
-    {
-        auto parts = juce::StringArray::fromTokens(line, "=,", "");
-        if (parts.size() < 2)
-        {
-            error = fieldName + " value expected";
-            errorCol = line.length();
-            return false;
-        }
-        
-        int value = parts[1].trim().getIntValue();
-        if (value < minVal || value > maxVal)
-        {
-            error = juce::String::formatted("%s must be %d-%d, got %d", 
-                                           fieldName.toRawUTF8(), minVal, maxVal, value);
-            errorCol = line.indexOf(parts[1]);
-            return false;
-        }
-        
-        return true;
-    }
-    
-    bool parseOperatorArray(const juce::String& line, juce::String& error, int& errorCol)
-    {
-        // Extract values between { }
-        int start = line.indexOf("{");
-        int end = line.indexOf("}");
-        
-        if (start < 0 || end < 0)
-        {
-            error = "Operator array must be enclosed in { }";
-            return false;
-        }
-        
-        juce::String values = line.substring(start + 1, end);
-        auto parts = juce::StringArray::fromTokens(values, ",", "");
-        
-        if (parts.size() != 11)
-        {
-            error = juce::String::formatted("Operator array expects 11 values, got %d", parts.size());
-            errorCol = start;
-            return false;
-        }
-        
-        // Validate each value (all should be integers)
-        for (int i = 0; i < parts.size(); ++i)
-        {
-            if (!parts[i].trim().containsOnly("0123456789"))
-            {
-                error = juce::String::formatted("Invalid value '%s' at position %d", 
-                                               parts[i].trim().toRawUTF8(), i + 1);
-                errorCol = line.indexOf(parts[i]);
-                return false;
-            }
-        }
-        
-        return true;
     }
 
 private:

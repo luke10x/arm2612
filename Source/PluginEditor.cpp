@@ -304,7 +304,8 @@ void ARM2612AudioProcessorEditor::showPatches()
         juce::AlertWindow::showMessageBoxAsync(
             juce::AlertWindow::InfoIcon,
             "Patch Selected",
-            "Selected: " + kBuiltInPatches[patchIndex].name + "\n(Patch loading not yet implemented)");
+            juce::String("Selected: ") + kBuiltInPatches[patchIndex].name + 
+            "\n(Patch loading not yet implemented)");
     };
     
     auto* modal = new PatchesModal(panel, []() {});
