@@ -127,6 +127,44 @@ constexpr int PATCH_GUITAR_BLOCK = 0;      // Octave offset
 constexpr int PATCH_GUITAR_LFO_ENABLE = 0; // LFO on/off
 constexpr int PATCH_GUITAR_LFO_FREQ = 5;   // LFO frequency (0-7)
 
+constexpr YM2612Patch PATCH_SUPERSAW =
+{
+    .ALG = 7,
+    .FB  = 6,
+    .AMS = 0,
+    .FMS = 0,
+
+    .op =
+    {
+        { .DT = -2, .MUL = 1, .TL = 8, .RS = 0, .AR = 31, .AM = 0, .DR = 10, .SR = 0, .SL = 0, .RR = 6, .SSG = 0 },
+        { .DT = 0, .MUL = 1, .TL = 10, .RS = 0, .AR = 31, .AM = 0, .DR = 10, .SR = 0, .SL = 0, .RR = 6, .SSG = 0 },
+        { .DT = 2, .MUL = 1, .TL = 8, .RS = 0, .AR = 31, .AM = 0, .DR = 10, .SR = 0, .SL = 0, .RR = 6, .SSG = 0 },
+        { .DT = 0, .MUL = 2, .TL = 18, .RS = 0, .AR = 31, .AM = 0, .DR = 12, .SR = 0, .SL = 0, .RR = 6, .SSG = 0 }
+    }
+};
+constexpr int PATCH_SUPERSAW_BLOCK = 0;
+constexpr int PATCH_SUPERSAW_LFO_ENABLE = 0;
+constexpr int PATCH_SUPERSAW_LFO_FREQ = 0;
+
+constexpr YM2612Patch PATCH_FLUTE =
+{
+    .ALG = 4,
+    .FB  = 5,
+    .AMS = 0,
+    .FMS = 0,
+
+    .op =
+    {
+        { .DT = 0, .MUL = 1, .TL = 63, .RS = 0, .AR = 31, .AM = 0, .DR = 5, .SR = 0, .SL = 1, .RR = 10, .SSG = 0 },
+        { .DT = 3, .MUL = 1, .TL = 0, .RS = 0, .AR = 31, .AM = 0, .DR = 16, .SR = 0, .SL = 1, .RR = 10, .SSG = 0 },
+        { .DT = 0, .MUL = 1, .TL = 63, .RS = 0, .AR = 31, .AM = 0, .DR = 5, .SR = 0, .SL = 1, .RR = 10, .SSG = 0 },
+        { .DT = 0, .MUL = 1, .TL = 0, .RS = 0, .AR = 0, .AM = 0, .DR = 5, .SR = 0, .SL = 1, .RR = 10, .SSG = 0 }
+    }
+};
+constexpr int PATCH_FLUTE_BLOCK = 0;      // Octave offset
+constexpr int PATCH_FLUTE_LFO_ENABLE = 0; // LFO on/off
+constexpr int PATCH_FLUTE_LFO_FREQ = 0;   // LFO frequency (0-7)
+
 // Array of all patches with metadata
 struct PatchEntry
 {
@@ -144,6 +182,8 @@ static constexpr PatchEntry kBuiltInPatches[] =
     { "Electric Bass", &PATCH_ELECTRIC_BASS, PATCH_ELECTRIC_BASS_BLOCK, PATCH_ELECTRIC_BASS_LFO_ENABLE, PATCH_ELECTRIC_BASS_LFO_FREQ },
     { "Acoustic Bass", &PATCH_ACOUSTIC_BASS, PATCH_ACOUSTIC_BASS_BLOCK, PATCH_ACOUSTIC_BASS_LFO_ENABLE, PATCH_ACOUSTIC_BASS_LFO_FREQ },
     { "Guitar",        &PATCH_GUITAR,        PATCH_GUITAR_BLOCK,        PATCH_GUITAR_LFO_ENABLE,        PATCH_GUITAR_LFO_FREQ },
+    { "Supersaw",      &PATCH_SUPERSAW,      PATCH_SUPERSAW_BLOCK,      PATCH_SUPERSAW_LFO_ENABLE,      PATCH_SUPERSAW_LFO_FREQ },
+    { "Flute",         &PATCH_FLUTE,         PATCH_FLUTE_BLOCK,         PATCH_FLUTE_LFO_ENABLE,            PATCH_FLUTE_LFO_FREQ },
 };
 
 static constexpr int kNumBuiltInPatches = sizeof(kBuiltInPatches) / sizeof(kBuiltInPatches[0]);
